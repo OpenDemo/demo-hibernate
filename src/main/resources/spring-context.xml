@@ -1,0 +1,105 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="
+http://www.springframework.org/schema/beans 
+http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+http://www.springframework.org/schema/tx
+http://www.springframework.org/schema/tx/spring-tx-2.5.xsd
+http://www.springframework.org/schema/aop 
+http://www.springframework.org/schema/aop/spring-aop-2.5.xsd
+  http://www.springframework.org/schema/context
+   http://www.springframework.org/schema/context/spring-context-2.5.xsd
+">
+	<!-- 组建扫描 -->
+	<context:component-scan base-package="cn.cjp" />
+
+	<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource">
+		<property name="driverClassName" value="com.mysql.jdbc.Driver">
+		</property>
+		<property name="url"
+			value="jdbc:mysql://localhost:3306/demo?useUnicode=true&amp;characterEncoding=utf8"></property>
+		<property name="username" value="root"></property>
+		<property name="password" value="root"></property>
+		<property name="maxActive" value="100"></property>
+		<property name="maxWait" value="30000"></property>
+		<property name="maxIdle" value="10"></property>
+
+		<!-- <property name="dbcp.ps.maxActive" value="100"></property> <property 
+			name="dbcp.ps.whenExhaustedAction" value="1"></property> <property name="dbcp.ps.maxWait" 
+			value="30000"></property> <property name="dbcp.ps.maxIdle" value="10"></property> -->
+	</bean>
+	<bean id="sessionFactory"
+		class="org.springframework.orm.hibernate3.annotation.AnnotationSessionFactoryBean">
+		<property name="dataSource" ref="dataSource"></property>
+		<!-- 1,首先在sessionFactory里面配置以上3条 2,然后得在类路径下面添加一个ehcache.xml的缓存配置文件 3,最后在要使用缓存的实体bean的映射文件里面配置缓存设置 
+			——使用二级缓存 ——不适用查询缓存，因为命中率不是很高 ——使用ehcache缓存产品 -->
+		<!-- 配置Hibernate属性 -->
+		<property name="hibernateProperties">
+			<props>
+				<prop key="javax.persistence.validation.mode">none</prop>
+				<prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop>
+				<prop key="hibernate.show_sql">true</prop>
+				<prop key="hibernate.format_sql">true</prop>
+				<prop key="hibernate.hbm2ddl.auto">update</prop>
+				<prop key="hibernate.connection.release_mode">after_statement</prop>
+				<!-- 使用Hibernate的二级缓存 -->
+				<prop key="hibernate.cache.use_query_cache">true</prop>
+				<prop key="hibernate.cache.use_second_level_cache">true</prop>
+				<prop key="hibernate.cache.provider_class">
+					net.sf.ehcache.hibernate.EhCacheProvider
+				</prop>
+				<!-- 
+				 <prop key="hibernate.cache.provider_class">
+				 	org.hibernate.cache.HashtableCacheProvider
+				 </prop>
+				 -->
+				<!--设置缓存的配置文件路径 -->
+				<prop key="hibernate.cache.provider_configuration_file_resource_path">
+				classpath:/ehcache.xml
+				</prop>
+			</props>
+		</property>
+		<property name="packagesToScan">
+			<list>
+				<value>cn.cjp.**.model</value>
+			</list>
+		</property>
+	</bean>
+
+	<bean id="hibernateTemplate" class="org.springframework.orm.hibernate3.HibernateTemplate">
+		<property name="sessionFactory" ref="sessionFactory"></property>
+		<property name="cacheQueries" value="true"></property>
+	</bean>
+
+	<bean id="txManager"
+		class="org.springframework.orm.hibernate3.HibernateTransactionManager">
+		<property name="sessionFactory" ref="sessionFactory"></property>
+	</bean>
+
+	<!-- annotation方式 配置事务的 开关 -->
+	<tx:annotation-driven transaction-manager="txManager" />
+
+	<!-- AOP代理设置，需要拦截的类的方法 -->
+	<!-- com.spider.service.impl.*.*(..) -->
+	<aop:config>
+		<aop:pointcut id="bussinessService"
+			expression="execution(public * cn.cjp.*.service.**(..))" />
+		<aop:advisor advice-ref="txAdvice" pointcut-ref="bussinessService" />
+	</aop:config>
+
+	<!-- 事务通知，配置事务的传播特性 -->
+	<tx:advice id="txAdvice" transaction-manager="txManager">
+		<tx:attributes>
+			<tx:method name="find*" read-only="true" propagation="NOT_SUPPORTED" />
+			<tx:method name="save*" propagation="REQUIRED" />
+			<tx:method name="del*" propagation="REQUIRED" />
+			<tx:method name="update*" propagation="REQUIRED" />
+			<tx:method name="insert*" propagation="REQUIRED" />
+		</tx:attributes>
+	</tx:advice>
+
+
+</beans>
+
