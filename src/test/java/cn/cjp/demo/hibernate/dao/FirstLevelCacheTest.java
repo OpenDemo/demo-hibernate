@@ -30,6 +30,23 @@ public class FirstLevelCacheTest extends TestCase {
 	public void before() {
 		System.out.println("============== Begin ==============");
 	}
+	
+	/**
+	 * 测试缓存更新策略
+	 */
+	@Test
+	public void testClearWhileUpdate() {
+		System.out.println(userDao.findAll());
+
+		System.out.println(userDao.findAll());
+		
+		UserModel sucre = new UserModel(1);
+		sucre.setAddr("北京市");
+		sucre.setName("Sucre");
+//		userDao.saveOrUpdate(sucre);
+
+		System.out.println(userDao.findAll());
+	}
 
 	/**
 	 * 测试一级缓存
